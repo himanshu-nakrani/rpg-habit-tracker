@@ -355,6 +355,7 @@ def uncomplete_habit(
         if current_user.streak > 0:
             current_user.streak -= 1
             streak_reverted = True
+            current_user.last_active_date = yesterday
 
     # Check for perfect day bonus reversal
     # If all habits are now incomplete, we need to remove perfect day bonus
