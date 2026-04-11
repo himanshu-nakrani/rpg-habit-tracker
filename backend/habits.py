@@ -371,7 +371,7 @@ def uncomplete_habit(
         .count()
     )
     perfect_day_bonus_removed = 0
-    if remaining_completions == 0 and total_active > 0:
+    if remaining_completions >= total_active and total_active > 0:
         # Was a perfect day, remove the bonus
         perfect_day_bonus_removed = 50 + (current_user.level * 10)
         # Adjust for current level (bonus scales with level at time of award)
