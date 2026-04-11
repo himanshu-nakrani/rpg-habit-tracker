@@ -67,6 +67,21 @@ const useHabitStore = create((set, get) => ({
     }
   },
 
+  uncompleteHabit: async (habitId) => {
+    try {
+      const res = await api.delete(`/habits/${habitId}/complete`);
+      set((state) => ({
+        habits: state.habits.map((h) =>
+          h.id === habitId ? { ...h, completed_today: false } : h
+        ),
+      }));
+      return res.data;
+    } catch (err) {
+      set({ error: err.response?.data?.detail || "Failed to undo completion" });
+      throw err;
+    }
+  },
+
   fetchDailyProgress: async () => {
     try {
       const res = await api.get("/progress/daily");

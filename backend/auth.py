@@ -9,7 +9,7 @@ import os
 
 from database import get_db
 from models import User
-from schemas import UserCreate, UserResponse, Token
+from schemas import UserCreate, UserUpdate, UserResponse, Token
 from xp import get_xp_progress
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -113,15 +113,25 @@ def get_me(current_user: User = Depends(get_current_user)):
 
 @router.put("/me", response_model=UserResponse)
 def update_me(
-    username: str = None,
-    avatar: str = None,
+    update_data: UserUpdate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    if username:
-        current_user.username = username
-    if avatar:
-        current_user.avatar = avatar
+    if update_data.username is not None:
+        if update_data.username == "":
+            raise HTTPException(status_code=400, detail="Username cannot be empty")
+        if len(update_data.username) > 50:
+            raise HTTPException(status_code=400, detail="Username must be 50 characters or less")
+        existing = db.query(User).filter(
+            User.username == update_data.username, User.id != current_user.id
+        ).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Username already taken")
+        current_user.username = update_data.username
+    if update_data.avatar is not None:
+        if update_data.avatar == "":
+            raise HTTPException(status_code=400, detail="Avatar cannot be empty")
+        current_user.avatar = update_data.avatar
     db.commit()
     db.refresh(current_user)
     return user_to_response(current_user)

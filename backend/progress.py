@@ -12,32 +12,6 @@ from xp import xp_required_for_level, get_xp_progress, check_streak_milestone, S
 router = APIRouter(prefix="/progress", tags=["progress"])
 
 
-def update_streak(user: User, db: Session) -> dict:
-    today = date.today().isoformat()
-    yesterday = (date.today() - timedelta(days=1)).isoformat()
-
-    if user.last_active_date == today:
-        return {"streak": user.streak, "milestone_bonus": 0}
-
-    if user.last_active_date == yesterday:
-        user.streak += 1
-    elif user.last_active_date != today:
-        user.streak = 1
-
-    user.last_active_date = today
-
-    milestone_hit, bonus_xp = check_streak_milestone(user.streak)
-    if milestone_hit:
-        user.xp += bonus_xp
-        while user.xp >= xp_required_for_level(user.level):
-            user.xp -= xp_required_for_level(user.level)
-            user.level += 1
-
-    db.commit()
-    db.refresh(user)
-    return {"streak": user.streak, "milestone_bonus": bonus_xp if milestone_hit else 0}
-
-
 @router.get("/daily", response_model=DailyProgress)
 def get_daily_progress(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     today = date.today().isoformat()
@@ -96,6 +70,33 @@ def get_achievements(current_user: User = Depends(get_current_user), db: Session
     return result
 
 
+@router.get("/history")
+def get_history(
+    days: int = 90,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    start_date = (date.today() - timedelta(days=days)).isoformat()
+    logs = (
+        db.query(
+            HabitLog.completed_date,
+            func.count(HabitLog.id).label("count"),
+            func.coalesce(func.sum(HabitLog.xp_earned), 0).label("xp"),
+        )
+        .filter(
+            HabitLog.user_id == current_user.id,
+            HabitLog.completed_date >= start_date,
+        )
+        .group_by(HabitLog.completed_date)
+        .order_by(HabitLog.completed_date)
+        .all()
+    )
+    return [
+        {"date": row.completed_date, "completions": row.count, "xp_earned": row.xp}
+        for row in logs
+    ]
+
+
 @router.get("/streak-info")
 def get_streak_info(current_user: User = Depends(get_current_user)):
     return {
@@ -110,9 +111,6 @@ def get_streak_info(current_user: User = Depends(get_current_user)):
 @router.get("/dashboard", response_model=DashboardResponse)
 def get_dashboard(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     from habits import habit_to_response
-
-    streak_info = update_streak(current_user, db)
-    db.refresh(current_user)
 
     habits = db.query(Habit).filter(Habit.user_id == current_user.id, Habit.is_active == True).all()
     habit_responses = [habit_to_response(h, db) for h in habits]

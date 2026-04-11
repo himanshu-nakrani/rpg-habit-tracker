@@ -16,12 +16,12 @@ const SKILLS = [
   { value: "creativity", label: "Creativity", icon: Palette },
 ];
 
-export default function CreateHabitModal({ onClose, onCreated }) {
-  const { createHabit } = useHabitStore();
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [difficulty, setDifficulty] = useState("easy");
-  const [skill, setSkill] = useState("health");
+export default function EditHabitModal({ habit, onClose, onUpdated }) {
+  const { updateHabit } = useHabitStore();
+  const [title, setTitle] = useState(habit.title);
+  const [description, setDescription] = useState(habit.description || "");
+  const [difficulty, setDifficulty] = useState(habit.difficulty);
+  const [skill, setSkill] = useState(habit.skill);
   const [error, setError] = useState("");
 
   const handleSubmit = async (e) => {
@@ -31,10 +31,10 @@ export default function CreateHabitModal({ onClose, onCreated }) {
       return;
     }
     try {
-      await createHabit({ title, description, difficulty, skill });
-      onCreated();
+      await updateHabit(habit.id, { title, description, difficulty, skill });
+      onUpdated();
     } catch {
-      setError("Failed to create quest");
+      setError("Failed to update quest");
     }
   };
 
@@ -44,8 +44,8 @@ export default function CreateHabitModal({ onClose, onCreated }) {
         <button className="modal-close" onClick={onClose}>
           <X size={20} />
         </button>
-        <h2 className="modal-title">New Quest</h2>
-        <p className="modal-subtitle">Define a new challenge for your adventurer</p>
+        <h2 className="modal-title">Edit Quest</h2>
+        <p className="modal-subtitle">Modify your quest details</p>
 
         {error && <div className="modal-error">{error}</div>}
 
@@ -115,7 +115,7 @@ export default function CreateHabitModal({ onClose, onCreated }) {
           </div>
 
           <button type="submit" className="submit-btn">
-            Create Quest
+            Save Changes
           </button>
         </form>
       </div>

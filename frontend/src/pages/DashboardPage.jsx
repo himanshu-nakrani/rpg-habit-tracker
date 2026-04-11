@@ -11,29 +11,51 @@ import DailyProgress from "../components/DailyProgress";
 import AchievementPopup from "../components/AchievementPopup";
 import LevelUpAnimation from "../components/LevelUpAnimation";
 import CreateHabitModal from "../components/CreateHabitModal";
+import EditHabitModal from "../components/EditHabitModal";
 import AchievementsPanel from "../components/AchievementsPanel";
-import { Plus, Trophy, LogOut, User } from "lucide-react";
+import QuestInsightsModal from "../components/QuestInsightsModal";
+import { Plus, Trophy, LogOut, User, Calendar, Sword, Wand2, Crosshair, Sparkles, Target } from "lucide-react";
+import useToastStore from "../stores/toastStore";
+import { DashboardSkeleton } from "../components/SkeletonLoaders";
+import ConfettiExplosion from "../components/ConfettiExplosion";
+import StreakDanger from "../components/StreakDanger";
+import ComboIndicator from "../components/ComboIndicator";
+import ClassRank from "../components/ClassRank";
+
+const BATTLE_CRIES = [
+  "Legendary move!", "The enemy trembles!", "Unstoppable force!",
+  "Critical strike!", "You're on fire!", "Power overwhelming!",
+  "A true warrior!", "Flawless execution!", "The gods approve!",
+  "Quest dominated!", "Heroic effort!", "Beyond mortal limits!",
+  "History in the making!", "The crowd goes wild!",
+];
+const randomCry = () => BATTLE_CRIES[Math.floor(Math.random() * BATTLE_CRIES.length)];
 
 const AVATARS = {
-  warrior: "⚔️",
-  mage: "🧙",
-  rogue: "🗡️",
-  healer: "✨",
-  ranger: "🏹",
+  warrior: Sword,
+  mage: Wand2,
+  rogue: Crosshair,
+  healer: Sparkles,
+  ranger: Target,
 };
 
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { user, token, fetchUser, logout } = useAuthStore();
-  const { habits, fetchHabits, completeHabit, deleteHabit, fetchDailyProgress, dailyProgress } =
+  const { habits, fetchHabits, completeHabit, uncompleteHabit, deleteHabit, fetchDailyProgress, dailyProgress } =
     useHabitStore();
-  const { achievements, newAchievement, fetchAchievements, showAchievementPopup, dismissPopup } =
+  const { currentAchievement, fetchAchievements, showAchievementPopup, dismissPopup } =
     useAchievementStore();
+  const addToast = useToastStore((s) => s.addToast);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingHabit, setEditingHabit] = useState(null);
   const [showAchievements, setShowAchievements] = useState(false);
   const [levelUpLevel, setLevelUpLevel] = useState(null);
   const [prevLevel, setPrevLevel] = useState(null);
+  const [combo, setCombo] = useState(0);
+  const [confettiActive, setConfettiActive] = useState(false);
+  const [insightsHabitId, setInsightsHabitId] = useState(null);
 
   useEffect(() => {
     if (!token) {
@@ -49,6 +71,8 @@ export default function DashboardPage() {
   useEffect(() => {
     if (user && prevLevel !== null && user.level > prevLevel) {
       setLevelUpLevel(user.level);
+      setConfettiActive(true);
+      setTimeout(() => setConfettiActive(false), 2500);
     }
     if (user) setPrevLevel(user.level);
   }, [user?.level]);
@@ -59,14 +83,43 @@ export default function DashboardPage() {
       await fetchUser();
       await fetchDailyProgress();
 
+      setCombo(result.combo || 0);
+
+      // Build rich toast message
+      let msg = `+${result.xp_earned} XP`;
+      if (result.is_critical) msg = `CRITICAL HIT! ${msg}`;
+      if (result.combo > 1) msg += ` (${result.combo}x combo)`;
+      if (result.streak_bonus) msg += ` +${result.streak_bonus} streak milestone!`;
+      msg += ` ${randomCry()}`;
+      addToast(msg, result.is_critical ? "warning" : "success", result.is_critical ? 5000 : 3500);
+
+      // Perfect day confetti
+      if (result.perfect_day) {
+        setConfettiActive(true);
+        setTimeout(() => setConfettiActive(false), 2500);
+        addToast(`PERFECT DAY! +${result.perfect_day_bonus} bonus XP! All quests complete!`, "success", 5000);
+      }
+
       const achRes = await api.get("/progress/achievements");
+      const currentAchievements = useAchievementStore.getState().achievements;
       const newlyUnlocked = achRes.data.filter(
-        (a) => a.unlocked && !achievements.find((oa) => oa.id === a.id && oa.unlocked)
+        (a) => a.unlocked && !currentAchievements.find((oa) => oa.id === a.id && oa.unlocked)
       );
       newlyUnlocked.forEach((a) => showAchievementPopup(a));
       await fetchAchievements();
     } catch (err) {
-      console.error(err);
+      addToast(err.response?.data?.detail || "Failed to complete quest", "error");
+    }
+  };
+
+  const handleUndo = async (habitId) => {
+    try {
+      const result = await uncompleteHabit(habitId);
+      await fetchUser();
+      await fetchDailyProgress();
+      addToast(`Completion undone (-${result.xp_removed} XP)`, "info");
+    } catch (err) {
+      addToast(err.response?.data?.detail || "Failed to undo", "error");
     }
   };
 
@@ -74,6 +127,7 @@ export default function DashboardPage() {
     if (window.confirm("Abandon this quest? This cannot be undone.")) {
       await deleteHabit(habitId);
       await fetchDailyProgress();
+      addToast("Quest abandoned", "warning");
     }
   };
 
@@ -83,33 +137,33 @@ export default function DashboardPage() {
   };
 
   if (!user) {
-    return (
-      <div className="loading-screen">
-        <div className="loading-spinner" />
-        <style>{`
-          .loading-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #0a0a1a; }
-          .loading-spinner { width: 40px; height: 40px; border: 3px solid #2d2250; border-top-color: #8b5cf6; border-radius: 50%; animation: spin 0.8s linear infinite; }
-          @keyframes spin { to { transform: rotate(360deg); } }
-        `}</style>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   return (
     <div className="dashboard">
+      <ConfettiExplosion active={confettiActive} />
       <LevelUpAnimation
         level={levelUpLevel}
         show={levelUpLevel !== null}
         onComplete={() => setLevelUpLevel(null)}
       />
-      <AchievementPopup achievement={newAchievement} onDismiss={dismissPopup} />
+      <AchievementPopup achievement={currentAchievement} onDismiss={dismissPopup} />
 
       {/* Top HUD Bar */}
       <header className="hud-bar">
         <div className="hud-left">
-          <div className="avatar-badge">
-            <span className="avatar-icon">{AVATARS[user.avatar] || "⚔️"}</span>
-            <span className="avatar-name">{user.username}</span>
+          <div
+            className="avatar-badge"
+            onClick={() => navigate("/profile")}
+            style={{ cursor: "pointer" }}
+            title="Edit Profile"
+          >
+            <span className="avatar-icon">{(() => { const Icon = AVATARS[user.avatar] || Sword; return <Icon size={24} />; })()}</span>
+            <div className="avatar-info">
+              <span className="avatar-name">{user.username}</span>
+              <ClassRank level={user.level} />
+            </div>
           </div>
         </div>
         <div className="hud-center">
@@ -121,6 +175,13 @@ export default function DashboardPage() {
           />
         </div>
         <div className="hud-right">
+          <button
+            onClick={() => navigate("/history")}
+            className="hud-btn"
+            title="Quest History"
+          >
+            <Calendar size={20} />
+          </button>
           <button
             onClick={() => setShowAchievements(!showAchievements)}
             className="hud-btn"
@@ -138,7 +199,9 @@ export default function DashboardPage() {
       <main className="dashboard-main">
         {/* Sidebar Stats */}
         <aside className="dashboard-sidebar">
+          <StreakDanger streak={user.streak} completedToday={dailyProgress?.completed_habits || 0} />
           <StreakCounter streak={user.streak} />
+          <ComboIndicator combo={combo} />
           <DailyProgress progress={dailyProgress} />
           {showAchievements && <AchievementsPanel />}
         </aside>
@@ -165,12 +228,33 @@ export default function DashboardPage() {
                   habit={habit}
                   onComplete={handleComplete}
                   onDelete={handleDelete}
+                  onEdit={(h) => setEditingHabit(h)}
+                  onUndo={handleUndo}
+                  onInsights={(id) => setInsightsHabitId(id)}
                 />
               ))
             )}
           </div>
         </section>
       </main>
+
+      {insightsHabitId && (
+        <QuestInsightsModal
+          habitId={insightsHabitId}
+          onClose={() => setInsightsHabitId(null)}
+        />
+      )}
+
+      {editingHabit && (
+        <EditHabitModal
+          habit={editingHabit}
+          onClose={() => setEditingHabit(null)}
+          onUpdated={() => {
+            setEditingHabit(null);
+            fetchHabits();
+          }}
+        />
+      )}
 
       {showCreateModal && (
         <CreateHabitModal
@@ -183,124 +267,6 @@ export default function DashboardPage() {
         />
       )}
 
-      <style>{`
-        .dashboard {
-          min-height: 100vh;
-          background: linear-gradient(180deg, #0a0a1a 0%, #0f0e1a 50%, #0a0a1a 100%);
-          color: #e2e8f0;
-        }
-
-        /* HUD Bar */
-        .hud-bar {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          padding: 12px 24px;
-          background: linear-gradient(180deg, #1a1033, #0f0e1a);
-          border-bottom: 1px solid #2d2250;
-          position: sticky;
-          top: 0;
-          z-index: 100;
-        }
-        .hud-left { flex: 0 0 auto; }
-        .hud-center { flex: 1; max-width: 600px; }
-        .hud-right { flex: 0 0 auto; display: flex; gap: 8px; }
-        .avatar-badge {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          background: rgba(139,92,246,0.1);
-          border: 1px solid #2d2250;
-          border-radius: 10px;
-          padding: 6px 14px;
-        }
-        .avatar-icon { font-size: 1.5rem; }
-        .avatar-name {
-          font-weight: 700;
-          color: #c4b5fd;
-          font-size: 0.9rem;
-        }
-        .hud-btn {
-          background: rgba(139,92,246,0.1);
-          border: 1px solid #2d2250;
-          border-radius: 8px;
-          color: #8b5cf6;
-          cursor: pointer;
-          padding: 8px;
-          transition: all 0.2s;
-        }
-        .hud-btn:hover {
-          background: rgba(139,92,246,0.2);
-          border-color: #8b5cf6;
-        }
-
-        /* Main Layout */
-        .dashboard-main {
-          display: grid;
-          grid-template-columns: 280px 1fr;
-          gap: 24px;
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 24px;
-        }
-        @media (max-width: 768px) {
-          .dashboard-main {
-            grid-template-columns: 1fr;
-          }
-        }
-
-        /* Sidebar */
-        .dashboard-sidebar {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-
-        /* Quest Section */
-        .quest-section-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 16px;
-        }
-        .quest-section-title {
-          font-size: 1.2rem;
-          font-weight: 800;
-          color: #e2e8f0;
-          letter-spacing: 1px;
-        }
-        .add-quest-btn {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          background: linear-gradient(135deg, #7c3aed, #8b5cf6);
-          border: none;
-          border-radius: 8px;
-          color: white;
-          padding: 8px 16px;
-          font-weight: 600;
-          font-size: 0.85rem;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-        .add-quest-btn:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 16px rgba(124,58,237,0.4);
-        }
-        .quest-list {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-        .no-quests {
-          text-align: center;
-          padding: 48px 24px;
-          color: #64748b;
-          background: #0f0e1a;
-          border: 1px dashed #2d2250;
-          border-radius: 12px;
-        }
-      `}</style>
     </div>
   );
 }
