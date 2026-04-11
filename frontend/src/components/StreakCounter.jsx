@@ -36,7 +36,8 @@ export default function StreakCounter({ streak }) {
     );
   }
   
-  const progressToNext = nextMilestone ? ((streak % nextMilestone) / nextMilestone) * 100 : 0;
+  const prevMilestone = STREAK_MILESTONES.slice().reverse().find(m => m <= streak) || 0;
+  const progressToNext = nextMilestone ? ((streak - prevMilestone) / (nextMilestone - prevMilestone)) * 100 : 0;
 
   return (
     <div className="streak-container">
