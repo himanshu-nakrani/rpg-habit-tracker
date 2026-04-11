@@ -208,4 +208,4 @@ This project is licensed under the MIT License.
 
 ---
 
-<p align="center">Made with by Himanshu Nakrani</p>
+<p align="center">Made with ❤️ by Himanshu Nakrani</p>
