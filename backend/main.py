@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine, SessionLocal, Base
@@ -9,8 +10,12 @@ from achievements import router as achievements_router, seed_achievements
 
 app = FastAPI(title="RPG Habit Tracker", version="1.0.0")
 
+FRONTEND_URL = os.getenv("FRONTEND_URL", "")
+allowed_origins = [o.strip() for o in FRONTEND_URL.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
+    allow_origins=allowed_origins if allowed_origins else [],
     allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
