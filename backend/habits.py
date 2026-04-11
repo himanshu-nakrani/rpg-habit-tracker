@@ -151,14 +151,14 @@ def get_habit_insights(
             prev = d_obj
 
     # Last 14 days heatmap data
+    # Last 14 days heatmap data
+    logs_map = {l.completed_date: l.xp_earned for l in logs}
     last_14 = []
     for i in range(13, -1, -1):
         d = today - timedelta(days=i)
         ds = d.isoformat()
-        completed = ds in dates_set
-        xp = next((l.xp_earned for l in logs if l.completed_date == ds), 0)
-        last_14.append({"date": ds, "completed": completed, "xp": xp, "day": d.strftime("%a")})
-
+        xp = logs_map.get(ds, 0)
+        last_14.append({"date": ds, "completed": ds in logs_map, "xp": xp, "day": d.strftime("%a")})
     # Power score (0-100) based on consistency
     days_since_creation = max((today - habit.created_at.date()).days, 1) if habit.created_at else 30
     consistency = min(total_completions / days_since_creation, 1.0)
