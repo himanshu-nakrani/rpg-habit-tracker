@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User, Achievement, UserAchievement, HabitLog
+from models import User, Achievement, UserAchievement, HabitLog, DifficultyEnum
 from auth import get_current_user
 
 router = APIRouter(prefix="/xp", tags=["xp"])
@@ -49,7 +49,7 @@ def check_and_award_achievements(user: User, db: Session):
         "Hard Mode": (
             db.query(HabitLog)
             .join(HabitLog.habit)
-            .filter(HabitLog.user_id == user.id, HabitLog.habit.has(difficulty="hard"))
+            .filter(HabitLog.user_id == user.id, HabitLog.habit.has(difficulty=DifficultyEnum.hard))
             .first()
             is not None
         ),
