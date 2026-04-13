@@ -21,7 +21,7 @@ export default function ToastContainer() {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="toast-container">
+    <div aria-atomic="false" aria-live="polite" className="toast-container" role="status">
       {toasts.map((toast) => {
         const Icon = ICONS[toast.type] || ICONS.info;
         const colors = COLORS[toast.type] || COLORS.info;
@@ -39,8 +39,10 @@ export default function ToastContainer() {
               {toast.message}
             </span>
             <button
+              aria-label="Dismiss notification"
               className="toast-close"
               onClick={() => removeToast(toast.id)}
+              type="button"
               style={{ color: colors.text }}
             >
               <X size={14} />

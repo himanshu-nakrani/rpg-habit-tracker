@@ -1,36 +1,39 @@
-import { useEffect, useState } from "react";
-
 const PARTICLE_COUNT = 40;
 const COLORS = ["#fbbf24", "#f97316", "#ef4444", "#8b5cf6", "#22c55e", "#3b82f6", "#ec4899"];
 
-function randomBetween(a, b) {
-  return Math.random() * (b - a) + a;
+function pseudoRandom(seed) {
+  const value = Math.sin(seed * 9999.91) * 43758.5453123;
+  return value - Math.floor(value);
 }
 
 export default function ConfettiExplosion({ active, duration = 2000 }) {
-  const [particles, setParticles] = useState([]);
+  const particles = active
+    ? Array.from({ length: PARTICLE_COUNT }, (_, i) => {
+        const seed = i + duration / 100;
+        const x = 10 + pseudoRandom(seed + 1) * 80;
+        const y = -10 + pseudoRandom(seed + 2) * 40;
+        const size = 4 + pseudoRandom(seed + 3) * 6;
+        const color = COLORS[Math.floor(pseudoRandom(seed + 4) * COLORS.length)];
+        const rotation = pseudoRandom(seed + 5) * 360;
+        const dx = -40 + pseudoRandom(seed + 6) * 80;
+        const dy = 40 + pseudoRandom(seed + 7) * 80;
+        const delay = pseudoRandom(seed + 8) * 0.3;
+        const shape = pseudoRandom(seed + 9) > 0.5 ? "circle" : "rect";
 
-  useEffect(() => {
-    if (!active) {
-      setParticles([]);
-      return;
-    }
-    const newParticles = Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
-      id: i,
-      x: randomBetween(10, 90),
-      y: randomBetween(-10, 30),
-      size: randomBetween(4, 10),
-      color: COLORS[Math.floor(Math.random() * COLORS.length)],
-      rotation: randomBetween(0, 360),
-      dx: randomBetween(-40, 40),
-      dy: randomBetween(40, 120),
-      delay: randomBetween(0, 0.3),
-      shape: Math.random() > 0.5 ? "circle" : "rect",
-    }));
-    setParticles(newParticles);
-    const timer = setTimeout(() => setParticles([]), duration);
-    return () => clearTimeout(timer);
-  }, [active]);
+        return {
+          id: i,
+          x,
+          y,
+          size,
+          color,
+          rotation,
+          dx,
+          dy,
+          delay,
+          shape,
+        };
+      })
+    : [];
 
   if (particles.length === 0) return null;
 
@@ -48,6 +51,7 @@ export default function ConfettiExplosion({ active, duration = 2000 }) {
             background: p.color,
             transform: `rotate(${p.rotation}deg)`,
             animationDelay: `${p.delay}s`,
+            animationDuration: `${duration}ms`,
             "--dx": `${p.dx}px`,
             "--dy": `${p.dy}vh`,
           }}

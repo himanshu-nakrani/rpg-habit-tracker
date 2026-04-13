@@ -8,13 +8,20 @@ export default function DailyProgress({ progress }) {
     <div className={`daily-progress-container ${isPerfect ? "daily-progress-perfect" : ""}`}>
       <div className="daily-progress-header">
         <span className="daily-progress-title">
-          {isPerfect ? "PERFECT DAY!" : "Daily Quest Progress"}
+          {isPerfect ? "Perfect Day" : "Today’s Progress"}
         </span>
         <span className="daily-progress-count">
           {progress.completed_habits}/{progress.total_habits}
         </span>
       </div>
-      <div className="daily-progress-track">
+      <div
+        aria-label="Daily quest completion"
+        aria-valuemax={100}
+        aria-valuemin={0}
+        aria-valuenow={percent}
+        className="daily-progress-track"
+        role="progressbar"
+      >
         <div
           className={`daily-progress-fill ${percent === 100 ? "daily-complete" : ""}`}
           style={{ width: `${percent}%` }}

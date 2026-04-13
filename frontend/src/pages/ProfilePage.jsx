@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useEffect, useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useAuthStore from "../stores/authStore";
 import api from "../api/client";
-import { ArrowLeft, Check, User, Sword, Wand2, Crosshair, Sparkles, Target } from "lucide-react";
+import { ArrowLeft, Check, Sword, Wand2, Crosshair, Sparkles, Target } from "lucide-react";
 
 const AVATARS = [
   { value: "warrior", label: "Warrior", icon: Sword },
@@ -20,6 +20,7 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
+  const usernameId = useId();
 
   useEffect(() => {
     if (!token) {
@@ -29,7 +30,7 @@ export default function ProfilePage() {
     if (!user) {
       fetchUser();
     }
-  }, [token]);
+  }, [fetchUser, navigate, token, user]);
 
   useEffect(() => {
     if (user) {
@@ -84,13 +85,16 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {error && <div className="profile-error">{error}</div>}
-        {success && <div className="profile-success">{success}</div>}
+        {error && <div className="profile-error" role="alert">{error}</div>}
+        {success && <div className="profile-success" role="status">{success}</div>}
 
         <div className="profile-section">
-          <label className="profile-label">Character Name</label>
+          <label className="profile-label" htmlFor={usernameId}>Character Name</label>
           <input
             type="text"
+            id={usernameId}
+            name="username"
+            autoComplete="username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             className="profile-input"
@@ -98,15 +102,18 @@ export default function ProfilePage() {
         </div>
 
         <div className="profile-section">
-          <label className="profile-label">Avatar</label>
+          <p className="profile-label">Avatar</p>
           <div className="avatar-grid">
             {AVATARS.map((a) => {
               const AvatarIcon = a.icon;
               return (
               <button
+                aria-label={`Choose ${a.label} avatar`}
+                aria-pressed={avatar === a.value}
                 key={a.value}
                 onClick={() => setAvatar(a.value)}
                 className={`avatar-option ${avatar === a.value ? "avatar-selected" : ""}`}
+                type="button"
               >
                 <span className="avatar-option-icon"><AvatarIcon size={28} /></span>
                 <span className="avatar-option-label">{a.label}</span>
@@ -125,8 +132,9 @@ export default function ProfilePage() {
           onClick={handleSave}
           disabled={saving}
           className="profile-save-btn"
+          type="button"
         >
-          {saving ? "Saving..." : "Save Changes"}
+          {saving ? "Saving…" : "Save Changes"}
         </button>
       </div>
 

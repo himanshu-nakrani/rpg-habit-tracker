@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Sword, Shield, Zap, CheckCircle2, Circle, Star, Trash2, Pencil, BarChart3, Heart, Brain, Briefcase, Users, Palette } from "lucide-react";
+import { Sword, Shield, Zap, CheckCircle2, Circle, Star, Trash2, Pencil, BarChart3, Heart, Brain, Briefcase, Users, Palette, MoreHorizontal } from "lucide-react";
 
 const DIFFICULTY_CONFIG = {
-  easy: { label: "Easy", xp: 10, color: "text-green-400", border: "border-green-800", bg: "from-green-950/50", icon: Shield },
-  medium: { label: "Medium", xp: 25, color: "text-amber-400", border: "border-amber-800", bg: "from-amber-950/50", icon: Zap },
-  hard: { label: "Hard", xp: 50, color: "text-red-400", border: "border-red-800", bg: "from-red-950/50", icon: Sword },
+  easy: { label: "Easy", xp: 10, tone: "#2cb67d", icon: Shield },
+  medium: { label: "Medium", xp: 25, tone: "#ffb84d", icon: Zap },
+  hard: { label: "Hard", xp: 50, tone: "#ff6b81", icon: Sword },
 };
 
 const SKILL_ICONS = {
@@ -21,6 +21,7 @@ export default function QuestCard({ habit, onComplete, onDelete, onEdit, onUndo,
   const isCompleted = habit.completed_today;
   const [justCompleted, setJustCompleted] = useState(false);
   const [showXpFloat, setShowXpFloat] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const handleCompleteClick = async () => {
     if (isCompleted) {
@@ -32,11 +33,12 @@ export default function QuestCard({ habit, onComplete, onDelete, onEdit, onUndo,
     onComplete(habit.id);
     setTimeout(() => setJustCompleted(false), 600);
     setTimeout(() => setShowXpFloat(false), 1200);
+    setMenuOpen(false);
   };
 
   return (
-    <div className={`quest-card ${isCompleted ? "quest-completed" : ""} ${justCompleted ? "quest-burst" : ""} ${config.border}`}>
-      <div className={`quest-bg ${config.bg}`} />
+    <div className={`quest-card ${isCompleted ? "quest-completed" : ""} ${justCompleted ? "quest-burst" : ""}`}>
+      <div className="quest-bg" style={{ background: `linear-gradient(90deg, ${config.tone}22, transparent)` }} />
       <div className="quest-content">
         <div className="quest-header">
           <div className="quest-skill">{(() => { const Icon = SKILL_ICONS[habit.skill] || Sword; return <Icon size={20} />; })()}</div>
@@ -52,7 +54,7 @@ export default function QuestCard({ habit, onComplete, onDelete, onEdit, onUndo,
 
         <div className="quest-footer">
           <div className="quest-meta">
-            <span className={`quest-difficulty ${config.color}`}>
+            <span className="quest-difficulty" style={{ color: config.tone }}>
               <DiffIcon size={14} />
               {config.label}
             </span>
@@ -64,36 +66,68 @@ export default function QuestCard({ habit, onComplete, onDelete, onEdit, onUndo,
 
           <div className="quest-actions">
             <button
+              aria-label={isCompleted ? `Undo ${habit.title}` : `Complete ${habit.title}`}
               onClick={handleCompleteClick}
               className={`quest-complete-btn ${isCompleted ? "quest-done" : ""} ${justCompleted ? "quest-check-pop" : ""}`}
-              title={isCompleted ? "Undo completion" : "Complete quest"}
+              type="button"
             >
               {isCompleted ? <CheckCircle2 size={22} /> : <Circle size={22} />}
             </button>
             {showXpFloat && (
               <span className="xp-float">+{config.xp} XP</span>
             )}
-            <button
-              onClick={() => onInsights(habit.id)}
-              className="quest-insights-btn"
-              title="Quest insights"
-            >
-              <BarChart3 size={16} />
-            </button>
-            <button
-              onClick={() => onEdit(habit)}
-              className="quest-edit-btn"
-              title="Edit quest"
-            >
-              <Pencil size={16} />
-            </button>
-            <button
-              onClick={() => onDelete(habit.id)}
-              className="quest-delete-btn"
-              title="Abandon quest"
-            >
-              <Trash2 size={16} />
-            </button>
+            <div className="quest-menu-wrap">
+              <button
+                aria-expanded={menuOpen}
+                aria-haspopup="menu"
+                aria-label={`Open actions for ${habit.title}`}
+                className="quest-menu-btn"
+                onClick={() => setMenuOpen((open) => !open)}
+                type="button"
+              >
+                <MoreHorizontal size={16} />
+              </button>
+              {menuOpen ? (
+                <div className="quest-menu" role="menu">
+                  <button
+                    className="quest-menu-item"
+                    onClick={() => {
+                      onInsights(habit.id);
+                      setMenuOpen(false);
+                    }}
+                    role="menuitem"
+                    type="button"
+                  >
+                    <BarChart3 size={16} />
+                    Insights
+                  </button>
+                  <button
+                    className="quest-menu-item"
+                    onClick={() => {
+                      onEdit(habit);
+                      setMenuOpen(false);
+                    }}
+                    role="menuitem"
+                    type="button"
+                  >
+                    <Pencil size={16} />
+                    Edit
+                  </button>
+                  <button
+                    className="quest-menu-item danger"
+                    onClick={() => {
+                      onDelete(habit.id);
+                      setMenuOpen(false);
+                    }}
+                    role="menuitem"
+                    type="button"
+                  >
+                    <Trash2 size={16} />
+                    Delete
+                  </button>
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
