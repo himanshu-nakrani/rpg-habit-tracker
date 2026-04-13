@@ -1,20 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 export default function LevelUpAnimation({ level, show, onComplete }) {
-  const [visible, setVisible] = useState(false);
-
   useEffect(() => {
-    if (show) {
-      setVisible(true);
-      const timer = setTimeout(() => {
-        setVisible(false);
-        onComplete?.();
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
+    if (!show) return undefined;
+
+    const timer = setTimeout(() => {
+      onComplete?.();
+    }, 3000);
+
+    return () => clearTimeout(timer);
   }, [show, onComplete]);
 
-  if (!visible) return null;
+  if (!show) return null;
 
   return (
     <div className="levelup-overlay">

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useAuthStore from "../stores/authStore";
 import useHabitStore from "../stores/habitStore";
@@ -14,22 +14,15 @@ import CreateHabitModal from "../components/CreateHabitModal";
 import EditHabitModal from "../components/EditHabitModal";
 import AchievementsPanel from "../components/AchievementsPanel";
 import QuestInsightsModal from "../components/QuestInsightsModal";
-import { Plus, Trophy, LogOut, User, Calendar, Sword, Wand2, Crosshair, Sparkles, Target } from "lucide-react";
+import { Plus, Trophy, LogOut, Calendar, Sword, Wand2, Crosshair, Sparkles, Target } from "lucide-react";
 import useToastStore from "../stores/toastStore";
 import { DashboardSkeleton } from "../components/SkeletonLoaders";
 import ConfettiExplosion from "../components/ConfettiExplosion";
 import StreakDanger from "../components/StreakDanger";
 import ComboIndicator from "../components/ComboIndicator";
 import ClassRank from "../components/ClassRank";
-
-const BATTLE_CRIES = [
-  "Legendary move!", "The enemy trembles!", "Unstoppable force!",
-  "Critical strike!", "You're on fire!", "Power overwhelming!",
-  "A true warrior!", "Flawless execution!", "The gods approve!",
-  "Quest dominated!", "Heroic effort!", "Beyond mortal limits!",
-  "History in the making!", "The crowd goes wild!",
-];
-const randomCry = () => BATTLE_CRIES[Math.floor(Math.random() * BATTLE_CRIES.length)];
+import ModalShell from "../components/ModalShell";
+import ConfirmDialog from "../components/ConfirmDialog";
 
 const AVATARS = {
   warrior: Sword,
@@ -52,10 +45,16 @@ export default function DashboardPage() {
   const [editingHabit, setEditingHabit] = useState(null);
   const [showAchievements, setShowAchievements] = useState(false);
   const [levelUpLevel, setLevelUpLevel] = useState(null);
-  const [prevLevel, setPrevLevel] = useState(null);
   const [combo, setCombo] = useState(0);
   const [confettiActive, setConfettiActive] = useState(false);
   const [insightsHabitId, setInsightsHabitId] = useState(null);
+  const [pendingDeleteHabit, setPendingDeleteHabit] = useState(null);
+
+  const triggerCelebration = useCallback((nextLevel) => {
+    setLevelUpLevel(nextLevel);
+    setConfettiActive(true);
+    window.setTimeout(() => setConfettiActive(false), 2500);
+  }, []);
 
   useEffect(() => {
     if (!token) {
@@ -66,38 +65,33 @@ export default function DashboardPage() {
     fetchHabits();
     fetchDailyProgress();
     fetchAchievements();
-  }, [token]);
-
-  useEffect(() => {
-    if (user && prevLevel !== null && user.level > prevLevel) {
-      setLevelUpLevel(user.level);
-      setConfettiActive(true);
-      setTimeout(() => setConfettiActive(false), 2500);
-    }
-    if (user) setPrevLevel(user.level);
-  }, [user?.level]);
+  }, [fetchAchievements, fetchDailyProgress, fetchHabits, fetchUser, navigate, token]);
 
   const handleComplete = async (habitId) => {
     try {
+      const previousLevel = user?.level ?? 0;
       const result = await completeHabit(habitId);
-      await fetchUser();
+      const updatedUser = await fetchUser();
       await fetchDailyProgress();
 
       setCombo(result.combo || 0);
 
       // Build rich toast message
       let msg = `+${result.xp_earned} XP`;
-      if (result.is_critical) msg = `CRITICAL HIT! ${msg}`;
-      if (result.combo > 1) msg += ` (${result.combo}x combo)`;
-      if (result.streak_bonus) msg += ` +${result.streak_bonus} streak milestone!`;
-      msg += ` ${randomCry()}`;
+      if (result.is_critical) msg = `Critical hit: ${msg}`;
+      if (result.combo > 1) msg += ` • ${result.combo}x combo`;
+      if (result.streak_bonus) msg += ` • streak bonus +${result.streak_bonus}`;
       addToast(msg, result.is_critical ? "warning" : "success", result.is_critical ? 5000 : 3500);
+
+      if (updatedUser?.level > previousLevel) {
+        triggerCelebration(updatedUser.level);
+      }
 
       // Perfect day confetti
       if (result.perfect_day) {
         setConfettiActive(true);
-        setTimeout(() => setConfettiActive(false), 2500);
-        addToast(`PERFECT DAY! +${result.perfect_day_bonus} bonus XP! All quests complete!`, "success", 5000);
+        window.setTimeout(() => setConfettiActive(false), 2500);
+        addToast(`Perfect day • +${result.perfect_day_bonus} XP`, "success", 5000);
       }
 
       const achRes = await api.get("/progress/achievements");
@@ -124,16 +118,19 @@ export default function DashboardPage() {
   };
 
   const handleDelete = async (habitId) => {
-    if (window.confirm("Abandon this quest? This cannot be undone.")) {
+    try {
       await deleteHabit(habitId);
       await fetchDailyProgress();
-      addToast("Quest abandoned", "warning");
+      addToast("Quest deleted", "warning");
+      setPendingDeleteHabit(null);
+    } catch (err) {
+      addToast(err.response?.data?.detail || "Failed to delete quest", "error");
     }
   };
 
   const handleLogout = () => {
     logout();
-    window.location.href = "/login";
+    navigate("/login");
   };
 
   if (!user) {
@@ -153,18 +150,18 @@ export default function DashboardPage() {
       {/* Top HUD Bar */}
       <header className="hud-bar">
         <div className="hud-left">
-          <div
+          <button
+            aria-label="Open profile"
             className="avatar-badge"
             onClick={() => navigate("/profile")}
-            style={{ cursor: "pointer" }}
-            title="Edit Profile"
+            type="button"
           >
             <span className="avatar-icon">{(() => { const Icon = AVATARS[user.avatar] || Sword; return <Icon size={24} />; })()}</span>
             <div className="avatar-info">
               <span className="avatar-name">{user.username}</span>
               <ClassRank level={user.level} />
             </div>
-          </div>
+          </button>
         </div>
         <div className="hud-center">
           <XPBar
@@ -176,20 +173,22 @@ export default function DashboardPage() {
         </div>
         <div className="hud-right">
           <button
+            aria-label="Open history"
             onClick={() => navigate("/history")}
             className="hud-btn"
-            title="Quest History"
+            type="button"
           >
             <Calendar size={20} />
           </button>
           <button
+            aria-label="View achievements"
             onClick={() => setShowAchievements(!showAchievements)}
             className="hud-btn"
-            title="Achievements"
+            type="button"
           >
             <Trophy size={20} />
           </button>
-          <button onClick={handleLogout} className="hud-btn" title="Logout">
+          <button aria-label="Log out" onClick={handleLogout} className="hud-btn" type="button">
             <LogOut size={20} />
           </button>
         </div>
@@ -197,29 +196,42 @@ export default function DashboardPage() {
 
       {/* Main Content */}
       <main className="dashboard-main">
-        {/* Sidebar Stats */}
-        <aside className="dashboard-sidebar">
+        <section className="dashboard-overview">
           <StreakDanger streak={user.streak} completedToday={dailyProgress?.completed_habits || 0} />
-          <StreakCounter streak={user.streak} />
-          <ComboIndicator combo={combo} />
-          <DailyProgress progress={dailyProgress} />
-          {showAchievements && <AchievementsPanel />}
-        </aside>
+          <div className="dashboard-sidebar">
+            <DailyProgress progress={dailyProgress} />
+            <StreakCounter streak={user.streak} />
+            <ComboIndicator combo={combo} />
+          </div>
+        </section>
 
         {/* Quest List */}
         <section className="quest-section">
           <div className="quest-section-header">
-            <h2 className="quest-section-title">Active Quests</h2>
-            <button onClick={() => setShowCreateModal(true)} className="add-quest-btn">
-              <Plus size={18} />
-              New Quest
-            </button>
+            <div>
+              <p className="quest-section-eyebrow">Today’s Workspace</p>
+              <h2 className="quest-section-title">Active Quests</h2>
+            </div>
+            <div className="quest-section-actions">
+              <button onClick={() => setShowAchievements(true)} className="secondary-btn" type="button">
+                <Trophy size={16} />
+                Achievements
+              </button>
+              <button onClick={() => setShowCreateModal(true)} className="add-quest-btn" type="button">
+                <Plus size={18} />
+                New Quest
+              </button>
+            </div>
           </div>
 
           <div className="quest-list">
             {habits.length === 0 ? (
               <div className="no-quests">
-                <p>No quests yet. Create your first quest to begin your adventure!</p>
+                <h3>No quests yet</h3>
+                <p>Start with one small repeatable quest so the dashboard has something to track today.</p>
+                <button className="primary-btn" onClick={() => setShowCreateModal(true)} type="button">
+                  Create First Quest
+                </button>
               </div>
             ) : (
               habits.map((habit) => (
@@ -227,7 +239,7 @@ export default function DashboardPage() {
                   key={habit.id}
                   habit={habit}
                   onComplete={handleComplete}
-                  onDelete={handleDelete}
+                  onDelete={(habitId) => setPendingDeleteHabit(habitId)}
                   onEdit={(h) => setEditingHabit(h)}
                   onUndo={handleUndo}
                   onInsights={(id) => setInsightsHabitId(id)}
@@ -244,6 +256,29 @@ export default function DashboardPage() {
           onClose={() => setInsightsHabitId(null)}
         />
       )}
+
+      {showAchievements ? (
+        <ModalShell
+          className="achievements-dialog"
+          closeLabel="Close achievements"
+          description="Unlocked milestones and remaining goals."
+          onClose={() => setShowAchievements(false)}
+          title="Achievements"
+        >
+          <AchievementsPanel />
+        </ModalShell>
+      ) : null}
+
+      {pendingDeleteHabit ? (
+        <ConfirmDialog
+          confirmLabel="Delete Quest"
+          description="This will remove the quest from your dashboard and history tracking for future completions."
+          isDestructive
+          onCancel={() => setPendingDeleteHabit(null)}
+          onConfirm={() => handleDelete(pendingDeleteHabit)}
+          title="Delete this quest?"
+        />
+      ) : null}
 
       {editingHabit && (
         <EditHabitModal

@@ -48,9 +48,11 @@ const useAuthStore = create((set) => ({
     try {
       const res = await api.get("/auth/me");
       set({ user: res.data });
+      return res.data;
     } catch {
       set({ user: null, token: null });
       localStorage.removeItem("token");
+      return null;
     }
   },
 

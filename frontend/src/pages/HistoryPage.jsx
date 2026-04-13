@@ -4,8 +4,24 @@ import useAuthStore from "../stores/authStore";
 import api from "../api/client";
 import { ArrowLeft, Calendar, Flame, Star } from "lucide-react";
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
+
+function toLocalDateKey(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatDateKey(dateKey) {
+  return dateFormatter.format(new Date(`${dateKey}T12:00:00`));
+}
 
 function getIntensity(count) {
   if (count === 0) return 0;
@@ -21,7 +37,7 @@ function generateCalendarData(historyMap, days) {
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
-    const key = d.toISOString().split("T")[0];
+    const key = toLocalDateKey(d);
     const entry = historyMap[key] || { completions: 0, xp_earned: 0 };
     cells.push({ date: key, ...entry, day: d.getDay(), month: d.getMonth() });
   }
@@ -44,7 +60,7 @@ export default function HistoryPage() {
       setHistory(res.data);
       setLoading(false);
     }).catch(() => setLoading(false));
-  }, [token]);
+  }, [navigate, token]);
 
   const historyMap = {};
   history.forEach((h) => { historyMap[h.date] = h; });
@@ -114,11 +130,19 @@ export default function HistoryPage() {
             {weeks.map((week, wi) => (
               <div key={wi} className="heatmap-week">
                 {week.map((cell, di) => (
-                  <div
+                  <button
+                    aria-label={
+                      cell
+                        ? `${formatDateKey(cell.date)}: ${cell.completions} completions and ${cell.xp_earned} XP`
+                        : "No activity"
+                    }
                     key={di}
                     className={`heatmap-cell intensity-${cell ? getIntensity(cell.completions) : 0}`}
                     onMouseEnter={() => cell && setHoveredCell(cell)}
                     onMouseLeave={() => setHoveredCell(null)}
+                    onFocus={() => cell && setHoveredCell(cell)}
+                    onBlur={() => setHoveredCell(null)}
+                    type="button"
                   />
                 ))}
               </div>
@@ -129,7 +153,7 @@ export default function HistoryPage() {
         {/* Tooltip */}
         {hoveredCell && (
           <div className="heatmap-tooltip">
-            <strong>{hoveredCell.date}</strong>: {hoveredCell.completions} quest{hoveredCell.completions !== 1 ? "s" : ""}, +{hoveredCell.xp_earned} XP
+            <strong>{formatDateKey(hoveredCell.date)}</strong>: {hoveredCell.completions} quest{hoveredCell.completions !== 1 ? "s" : ""}, +{hoveredCell.xp_earned} XP
           </div>
         )}
 
@@ -142,7 +166,7 @@ export default function HistoryPage() {
           <span className="heatmap-legend-label">More</span>
         </div>
 
-        {loading && <p className="history-loading">Loading history...</p>}
+        {loading && <p className="history-loading">Loading history…</p>}
       </div>
 
     </div>

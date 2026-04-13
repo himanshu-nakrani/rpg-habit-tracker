@@ -10,15 +10,26 @@ export default function XPBar({ xp, xpForNextLevel, level, xpProgress }) {
 
   return (
     <div className="xp-bar-container">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <span className="level-badge">LV.{level}</span>
-          <span className="text-amber-400 font-bold text-sm tracking-wide">
-            {xp} / {xpForNextLevel} XP
-          </span>
+      <div className="xp-bar-header">
+        <div>
+          <p className="xp-bar-label">Level Progress</p>
+          <div className="xp-bar-meta">
+            <span className="level-badge">Lv {level}</span>
+            <span className="xp-bar-copy">
+              {xp} / {xpForNextLevel} XP
+            </span>
+          </div>
         </div>
+        <span className="xp-bar-percent">{Math.round(xpProgress * 100)}%</span>
       </div>
-      <div className="xp-bar-track">
+      <div
+        aria-label="Experience progress"
+        aria-valuemax={100}
+        aria-valuemin={0}
+        aria-valuenow={Math.round(animatedProgress)}
+        className="xp-bar-track"
+        role="progressbar"
+      >
         <div
           className="xp-bar-fill"
           style={{ width: `${animatedProgress}%` }}

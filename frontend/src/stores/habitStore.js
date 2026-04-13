@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import api from "../api/client";
 
-const useHabitStore = create((set, get) => ({
+const useHabitStore = create((set) => ({
   habits: [],
   dailyProgress: null,
   loading: false,
@@ -12,7 +12,7 @@ const useHabitStore = create((set, get) => ({
     try {
       const res = await api.get("/habits/");
       set({ habits: res.data, loading: false });
-    } catch (err) {
+    } catch {
       set({ error: "Failed to fetch habits", loading: false });
     }
   },
@@ -49,6 +49,7 @@ const useHabitStore = create((set, get) => ({
       }));
     } catch (err) {
       set({ error: "Failed to delete habit" });
+      throw err;
     }
   },
 

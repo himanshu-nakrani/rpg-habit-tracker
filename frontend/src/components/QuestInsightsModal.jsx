@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../api/client";
-import { X, Flame, Star, Target, TrendingUp, Trophy, Zap, BarChart3, Heart, Brain, Briefcase, Users, Palette, Sword } from "lucide-react";
+import { Flame, Star, Target, TrendingUp, Trophy, Zap, BarChart3, Heart, Brain, Briefcase, Users, Palette, Sword } from "lucide-react";
+import ModalShell from "./ModalShell";
 
 const SKILL_ICONS = { health: Heart, mind: Brain, career: Briefcase, social: Users, creativity: Palette };
 
@@ -42,25 +43,31 @@ export default function QuestInsightsModal({ habitId, onClose }) {
 
   if (loading) {
     return (
-      <div className="insights-overlay" onClick={onClose}>
-        <div className="insights-card" onClick={(e) => e.stopPropagation()}>
+      <ModalShell
+        className="insights-card"
+        closeLabel="Close quest insights"
+        description="Quest activity and completion trends."
+        onClose={onClose}
+        title="Quest Insights"
+      >
           <div className="insights-loading">
             <div className="insights-spinner" />
-            <span>Analyzing quest data...</span>
+            <span>Analyzing quest data…</span>
           </div>
-        </div>
-        </div>
+      </ModalShell>
     );
   }
 
   if (!data) return null;
 
   return (
-    <div className="insights-overlay" onClick={onClose}>
-      <div className="insights-card" onClick={(e) => e.stopPropagation()}>
-        <button className="insights-close" onClick={onClose}><X size={20} /></button>
-
-        {/* Header */}
+    <ModalShell
+      className="insights-card"
+      closeLabel="Close quest insights"
+      description="Quest activity and completion trends."
+      onClose={onClose}
+      title={null}
+    >
         <div className="insights-header">
           <span className="insights-skill-icon">{(() => { const Icon = SKILL_ICONS[data.skill] || Sword; return <Icon size={24} />; })()}</span>
           <div>
@@ -133,7 +140,12 @@ export default function QuestInsightsModal({ habitId, onClose }) {
           <span className="insights-section-title">Last 14 Days</span>
           <div className="activity-grid">
             {data.last_14_days.map((d) => (
-              <div key={d.date} className="activity-day" title={`${d.date}: ${d.completed ? `+${d.xp} XP` : "Missed"}`}>
+              <div
+                aria-label={`${d.date}: ${d.completed ? `Completed for ${d.xp} XP` : "Missed"}`}
+                key={d.date}
+                className="activity-day"
+                title={`${d.date}: ${d.completed ? `+${d.xp} XP` : "Missed"}`}
+              >
                 <div className={`activity-dot ${d.completed ? "activity-done" : "activity-miss"}`}>
                   {d.completed && <Zap size={10} />}
                 </div>
@@ -142,8 +154,7 @@ export default function QuestInsightsModal({ habitId, onClose }) {
             ))}
           </div>
         </div>
-      </div>
-    </div>
+    </ModalShell>
   );
 }
 
@@ -153,4 +164,3 @@ function rateColor(rate) {
   if (rate >= 25) return "#f97316";
   return "#ef4444";
 }
-

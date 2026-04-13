@@ -1,20 +1,7 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import useHabitStore from "../stores/habitStore";
-import { X, Sword, Shield, Zap, Heart, Brain, Briefcase, Users, Palette } from "lucide-react";
-
-const DIFFICULTIES = [
-  { value: "easy", label: "Easy", xp: 10, icon: Shield, color: "text-green-400", border: "border-green-600" },
-  { value: "medium", label: "Medium", xp: 25, icon: Zap, color: "text-amber-400", border: "border-amber-600" },
-  { value: "hard", label: "Hard", xp: 50, icon: Sword, color: "text-red-400", border: "border-red-600" },
-];
-
-const SKILLS = [
-  { value: "health", label: "Health", icon: Heart },
-  { value: "mind", label: "Mind", icon: Brain },
-  { value: "career", label: "Career", icon: Briefcase },
-  { value: "social", label: "Social", icon: Users },
-  { value: "creativity", label: "Creativity", icon: Palette },
-];
+import ModalShell from "./ModalShell";
+import { DIFFICULTIES, SKILLS } from "./habitOptions";
 
 export default function EditHabitModal({ habit, onClose, onUpdated }) {
   const { updateHabit } = useHabitStore();
@@ -23,6 +10,8 @@ export default function EditHabitModal({ habit, onClose, onUpdated }) {
   const [difficulty, setDifficulty] = useState(habit.difficulty);
   const [skill, setSkill] = useState(habit.skill);
   const [error, setError] = useState("");
+  const titleId = useId();
+  const descriptionId = useId();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -39,36 +28,47 @@ export default function EditHabitModal({ habit, onClose, onUpdated }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose}>
-          <X size={20} />
-        </button>
-        <h2 className="modal-title">Edit Quest</h2>
-        <p className="modal-subtitle">Modify your quest details</p>
+    <ModalShell
+      closeLabel="Close edit quest dialog"
+      description="Update the title, description, difficulty, and focus area for this quest."
+      onClose={onClose}
+      title="Edit Quest"
+    >
+      {error ? (
+        <div className="modal-error" role="alert">
+          {error}
+        </div>
+      ) : null}
 
-        {error && <div className="modal-error">{error}</div>}
-
-        <form onSubmit={handleSubmit} className="modal-form">
+      <form onSubmit={handleSubmit} className="modal-form">
           <div className="form-group">
-            <label className="form-label">Quest Title</label>
+            <label className="form-label" htmlFor={titleId}>
+              Quest Title
+            </label>
             <input
               type="text"
+              autoComplete="off"
+              id={titleId}
+              name="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g., Morning Workout"
+              placeholder="Ex. Morning Workout…"
               className="form-input"
-              autoFocus
             />
           </div>
 
           <div className="form-group">
-            <label className="form-label">Description (optional)</label>
+            <label className="form-label" htmlFor={descriptionId}>
+              Description
+            </label>
             <input
               type="text"
+              autoComplete="off"
+              id={descriptionId}
+              name="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="e.g., 30 minutes of exercise"
+              placeholder="Ex. 30 minutes of exercise…"
               className="form-input"
             />
           </div>
@@ -82,11 +82,12 @@ export default function EditHabitModal({ habit, onClose, onUpdated }) {
                   <button
                     key={d.value}
                     type="button"
+                    aria-pressed={difficulty === d.value}
                     onClick={() => setDifficulty(d.value)}
-                    className={`difficulty-btn ${difficulty === d.value ? `selected ${d.border}` : ""}`}
+                    className={`difficulty-btn ${difficulty === d.value ? "selected" : ""}`}
                   >
-                    <Icon size={18} className={d.color} />
-                    <span className={d.color}>{d.label}</span>
+                    <Icon size={18} style={{ color: d.color }} />
+                    <span style={{ color: d.color }}>{d.label}</span>
                     <span className="text-xs text-gray-500">+{d.xp} XP</span>
                   </button>
                 );
@@ -103,6 +104,7 @@ export default function EditHabitModal({ habit, onClose, onUpdated }) {
                   <button
                     key={s.value}
                     type="button"
+                    aria-pressed={skill === s.value}
                     onClick={() => setSkill(s.value)}
                     className={`skill-btn ${skill === s.value ? "selected" : ""}`}
                   >
@@ -117,9 +119,7 @@ export default function EditHabitModal({ habit, onClose, onUpdated }) {
           <button type="submit" className="submit-btn">
             Save Changes
           </button>
-        </form>
-      </div>
-
-    </div>
+      </form>
+    </ModalShell>
   );
 }
