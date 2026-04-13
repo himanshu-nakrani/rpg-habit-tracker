@@ -111,6 +111,18 @@
   }
 }
 
+@keyframes check-pop {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
 @keyframes confetti-fall {
   from {
     opacity: 1;
@@ -866,6 +878,10 @@ select {
   background: var(--success-soft);
   border-color: rgba(44, 182, 125, 0.3);
   color: var(--success-500);
+}
+
+.quest-check-pop {
+  animation: check-pop 220ms ease;
 }
 
 .quest-completed {

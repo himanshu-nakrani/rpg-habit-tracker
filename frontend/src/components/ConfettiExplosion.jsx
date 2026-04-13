@@ -6,19 +6,19 @@ function pseudoRandom(seed) {
   return value - Math.floor(value);
 }
 
-export default function ConfettiExplosion({ active, duration = 2000 }) {
+export default function ConfettiExplosion({ active, duration = 2000, seed = 0 }) {
   const particles = active
     ? Array.from({ length: PARTICLE_COUNT }, (_, i) => {
-        const seed = i + duration / 100;
-        const x = 10 + pseudoRandom(seed + 1) * 80;
-        const y = -10 + pseudoRandom(seed + 2) * 40;
-        const size = 4 + pseudoRandom(seed + 3) * 6;
-        const color = COLORS[Math.floor(pseudoRandom(seed + 4) * COLORS.length)];
-        const rotation = pseudoRandom(seed + 5) * 360;
-        const dx = -40 + pseudoRandom(seed + 6) * 80;
-        const dy = 40 + pseudoRandom(seed + 7) * 80;
-        const delay = pseudoRandom(seed + 8) * 0.3;
-        const shape = pseudoRandom(seed + 9) > 0.5 ? "circle" : "rect";
+        const particleSeed = seed + i + duration / 100;
+        const x = 10 + pseudoRandom(particleSeed + 1) * 80;
+        const y = -10 + pseudoRandom(particleSeed + 2) * 40;
+        const size = 4 + pseudoRandom(particleSeed + 3) * 6;
+        const color = COLORS[Math.floor(pseudoRandom(particleSeed + 4) * COLORS.length)];
+        const rotation = pseudoRandom(particleSeed + 5) * 360;
+        const dx = -40 + pseudoRandom(particleSeed + 6) * 80;
+        const dy = 40 + pseudoRandom(particleSeed + 7) * 80;
+        const delay = pseudoRandom(particleSeed + 8) * 0.3;
+        const shape = pseudoRandom(particleSeed + 9) > 0.5 ? "circle" : "rect";
 
         return {
           id: i,
