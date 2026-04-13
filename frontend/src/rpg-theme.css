@@ -1492,6 +1492,16 @@ select {
   gap: 6px;
 }
 
+.heatmap-day-label {
+  align-items: center;
+  color: var(--text-muted);
+  display: flex;
+  font-size: 0.72rem;
+  height: 18px;
+  justify-content: flex-end;
+  line-height: 1;
+}
+
 .heatmap-grid {
   display: grid;
   gap: 6px;

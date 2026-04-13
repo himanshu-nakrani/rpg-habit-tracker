@@ -118,10 +118,14 @@ export default function DashboardPage() {
   };
 
   const handleDelete = async (habitId) => {
-    await deleteHabit(habitId);
-    await fetchDailyProgress();
-    addToast("Quest deleted", "warning");
-    setPendingDeleteHabit(null);
+    try {
+      await deleteHabit(habitId);
+      await fetchDailyProgress();
+      addToast("Quest deleted", "warning");
+      setPendingDeleteHabit(null);
+    } catch (err) {
+      addToast(err.response?.data?.detail || "Failed to delete quest", "error");
+    }
   };
 
   const handleLogout = () => {

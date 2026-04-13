@@ -47,8 +47,9 @@ const useHabitStore = create((set) => ({
       set((state) => ({
         habits: state.habits.filter((h) => h.id !== habitId),
       }));
-    } catch {
+    } catch (err) {
       set({ error: "Failed to delete habit" });
+      throw err;
     }
   },
 

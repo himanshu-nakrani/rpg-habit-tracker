@@ -1,4 +1,4 @@
-import { useEffect, useId } from "react";
+import { useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
@@ -23,6 +23,7 @@ export default function ModalShell({
 }) {
   const titleId = useId();
   const descriptionId = useId();
+  const panelRef = useRef(null);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -34,21 +35,28 @@ export default function ModalShell({
   }, []);
 
   useEffect(() => {
-    const panel = document.querySelector("[data-modal-panel='true']");
+    const panel = panelRef.current;
     if (!panel) return undefined;
+
+    const isTopmostPanel = () => {
+      const panels = document.querySelectorAll("[data-modal-panel='true']");
+      return panels[panels.length - 1] === panel;
+    };
 
     const focusable = getFocusableElements(panel);
     const initialTarget = focusable[1] || focusable[0] || panel;
-    initialTarget?.focus();
+    if (isTopmostPanel()) initialTarget?.focus();
 
     const handleKeyDown = (event) => {
       if (event.key === "Escape") {
+        if (!isTopmostPanel()) return;
         event.preventDefault();
         onClose();
         return;
       }
 
       if (event.key !== "Tab") return;
+      if (!isTopmostPanel()) return;
 
       const currentFocusable = getFocusableElements(panel);
       if (currentFocusable.length === 0) {
@@ -81,6 +89,7 @@ export default function ModalShell({
         aria-modal="true"
         className={`modal-card ${className}`.trim()}
         data-modal-panel="true"
+        ref={panelRef}
         onMouseDown={(event) => event.stopPropagation()}
         role="dialog"
         tabIndex={-1}
