@@ -364,6 +364,11 @@ select {
   width: 40px;
 }
 
+.quest-skill {
+  height: 40px;
+  width: 40px;
+}
+
 .avatar-info {
   align-items: flex-start;
   display: flex;

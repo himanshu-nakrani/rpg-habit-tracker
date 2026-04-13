@@ -24,6 +24,11 @@ export default function ModalShell({
   const titleId = useId();
   const descriptionId = useId();
   const panelRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -51,7 +56,7 @@ export default function ModalShell({
       if (event.key === "Escape") {
         if (!isTopmostPanel()) return;
         event.preventDefault();
-        onClose();
+        onCloseRef.current();
         return;
       }
 
@@ -79,7 +84,7 @@ export default function ModalShell({
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  }, []);
 
   return createPortal(
     <div className="modal-overlay" onMouseDown={onClose}>
@@ -113,6 +118,24 @@ export default function ModalShell({
               </p>
             ) : null}
           </div>
+        ) : null}
+        {!title && !describedBy && description ? (
+          <p
+            id={descriptionId}
+            style={{
+              position: "absolute",
+              width: 1,
+              height: 1,
+              padding: 0,
+              margin: -1,
+              overflow: "hidden",
+              clip: "rect(0, 0, 0, 0)",
+              whiteSpace: "nowrap",
+              border: 0,
+            }}
+          >
+            {description}
+          </p>
         ) : null}
         {children}
       </div>
